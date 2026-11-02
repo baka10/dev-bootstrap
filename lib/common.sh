@@ -256,7 +256,10 @@ append_line_once() {
 }
 
 # json_merge BASE OVERLAY -> stdout. Deep merge; OVERLAY wins, arrays are unioned
-# (order preserved, duplicates dropped). Uses jq when present, python3 otherwise.
+# (order preserved, duplicates dropped). Array elements that are objects with a
+# "matcher" key (Claude Code hook groups) are replaced by matcher, so updating a
+# hook's command does not leave the old entry behind.
+# Uses jq when present, python3 otherwise.
 json_merge() {
   if has jq; then
     # $-parameters bind values; plain filter parameters would be re-evaluated
@@ -266,7 +269,11 @@ json_merge() {
         if ($a | type) == "object" and ($b | type) == "object" then
           reduce ($b | keys_unsorted[]) as $k ($a; .[$k] = merge($a[$k]; $b[$k]))
         elif ($a | type) == "array" and ($b | type) == "array" then
-          reduce $b[] as $v ($a; if index([$v]) then . else . + [$v] end)
+          reduce $b[] as $v ($a;
+            if ($v | type) == "object" and ($v | has("matcher")) then
+              map(if (type == "object" and .matcher == $v.matcher) then $v else . end)
+              | if index([$v]) then . else . + [$v] end
+            elif index([$v]) then . else . + [$v] end)
         else $b end;
       merge(.[0]; .[1])
     ' "$1" "$2"
@@ -282,6 +289,8 @@ def merge(a, b):
     if isinstance(a, list) and isinstance(b, list):
         out = list(a)
         for v in b:
+            if isinstance(v, dict) and "matcher" in v:
+                out = [v if isinstance(x, dict) and x.get("matcher") == v["matcher"] else x for x in out]
             if v not in out:
                 out.append(v)
         return out

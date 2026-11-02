@@ -39,11 +39,12 @@ else
 fi
 
 # --- Global config (~/.copilot) ----------------------------------------------
-# Copilot CLI reads project instructions from AGENTS.md / .github/copilot-instructions.md;
-# the shared principles live in ai/AGENTS.md and the templates below.
+# The CLI rewrites config.json itself (trusted folders, model, state), so it is
+# seeded once from the repo and never linked. Project instructions come from
+# AGENTS.md / .github/copilot-instructions.md (template in copilot/templates).
 COPILOT_HOME="$HOME/.copilot"
 ensure_dir "$COPILOT_HOME"
-link_file "$REPO_ROOT/copilot/config.json" "$COPILOT_HOME/config.json"
+copy_if_missing "$REPO_ROOT/copilot/config.json" "$COPILOT_HOME/config.json"
 
 if [[ "$DRY_RUN" != 1 ]] && has copilot; then
   log_info "authenticate with: copilot  then  /login   (or set GH_TOKEN / use gh auth login)"

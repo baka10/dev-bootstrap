@@ -1,7 +1,8 @@
 # ~/.gitconfig.local — your identity and per-machine git settings (not tracked).
+# Uncomment and fill in; until then git refuses to commit instead of using a placeholder.
 [user]
-	name = Your Name
-	email = you@example.com
+	# name = Your Name
+	# email = you@example.com
 	# signingkey = ...
 
 # [commit]

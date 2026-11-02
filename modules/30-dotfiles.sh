@@ -18,7 +18,7 @@ copy_if_missing "$D/zshrc.local.example"     "$HOME/.zshrc.local"
 copy_if_missing "$D/gitconfig.local.example" "$HOME/.gitconfig.local"
 
 if [[ "$DRY_RUN" != 1 ]]; then
-  if grep -q 'Your Name' "$HOME/.gitconfig.local" 2>/dev/null; then
+  if ! grep -Eq '^[[:space:]]*name[[:space:]]*=' "$HOME/.gitconfig.local" 2>/dev/null; then
     log_warn "set your git identity in ~/.gitconfig.local ([user] name / email)"
   fi
 fi

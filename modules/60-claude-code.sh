@@ -63,8 +63,10 @@ if ! has claude; then
   exit 0
 fi
 
-marketplace_known() { claude plugin marketplace list 2>/dev/null | grep -q "$1"; }
-plugin_installed()  { claude plugin list 2>/dev/null | grep -q "$1"; }
+# Capture the listing first: `claude ... | grep -q` would SIGPIPE claude on the
+# first match and, under pipefail, report an installed plugin as missing.
+marketplace_known() { local out; out="$(claude plugin marketplace list 2>/dev/null)"; grep -qF -- "$1" <<<"$out"; }
+plugin_installed()  { local out; out="$(claude plugin list 2>/dev/null)"; grep -qF -- "$1" <<<"$out"; }
 
 # caveman lives in its own marketplace; superpowers is in Anthropic's official one,
 # which Claude Code registers by itself.
@@ -78,7 +80,11 @@ for plugin in superpowers@claude-plugins-official caveman@caveman; do
   if plugin_installed "$plugin"; then
     log_skip "plugin $plugin"
   else
-    run claude plugin install --yes --scope user "$plugin" && log_ok "installed $plugin"
+    if run claude plugin install --yes --scope user "$plugin"; then
+      log_ok "installed $plugin"
+    else
+      die "could not install $plugin (check network / 'claude plugin marketplace list'), re-run to retry"
+    fi
   fi
 done
 

@@ -73,6 +73,20 @@ while [[ $# -gt 0 ]]; do
 done
 export DRY_RUN ASSUME_YES VERBOSE
 
+# Fail on typos in --only/--skip instead of silently running nothing.
+known_modules=""
+for m in "$REPO_ROOT"/modules/[0-9][0-9]-*.sh; do
+  n="$(basename "$m" .sh)"; known_modules="$known_modules,${n#[0-9][0-9]-}"
+done
+for sel in "$ONLY" "$SKIP"; do
+  [[ -z "$sel" ]] && continue
+  old_ifs="$IFS"; IFS=','
+  for n in $sel; do
+    in_list "$n" "${known_modules#,}" || { IFS="$old_ifs"; die "unknown module '$n' (see --list)"; }
+  done
+  IFS="$old_ifs"
+done
+
 load_config
 detect_os
 log_step "dev-bootstrap"

@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/protect-paths.sh"
+            "command": "\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/protect-paths.sh\""
           }
         ]
       }
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/format-on-edit.sh"
+            "command": "\"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/format-on-edit.sh\""
           }
         ]
       }

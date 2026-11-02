@@ -31,12 +31,14 @@ t_dry()    {
 t_only()   { dry_has 'module: dotfiles' --only dotfiles && dry_lacks 'module: zsh' --only dotfiles; }
 t_skip()   { dry_lacks 'module: fonts' --skip fonts,claude-code; }
 t_badopt() { ! ./install.sh --nope >/dev/null 2>&1; }
+t_badmod() { ! ./install.sh --dry-run --yes --only dotfile >/dev/null 2>&1 && ! ./install.sh --dry-run --yes --skip zshh >/dev/null 2>&1; }
 check "--help prints usage"             t_help
 check "--list shows modules"            t_list
 check "--dry-run runs every module"     t_dry
 check "--only limits modules"           t_only
 check "--skip excludes modules"         t_skip
 check "unknown option fails"            t_badopt
+check "unknown module name fails"       t_badmod
 
 echo "== configuration"
 t_ai_default() { dry_has 'ai=claude' --only copilot && dry_has 'skipping GitHub Copilot' --only copilot; }
@@ -45,8 +47,12 @@ t_ai_env()     { [[ "$(AI_ASSISTANT=none dry_count 'skipping' --only claude-code
 t_ai_both()    { dry_lacks 'skipping Claude Code' --ai both --only claude-code && dry_lacks 'skipping GitHub Copilot' --ai both --only copilot; }
 t_ai_bad()     { ! ./install.sh --dry-run --yes --ai vim >/dev/null 2>&1; }
 t_local_conf() {
-  printf 'AI_ASSISTANT=copilot\n' > bootstrap.local.conf
-  local out; out="$(dry --only claude-code)"; rm -f bootstrap.local.conf
+  # Never touch a real bootstrap.local.conf: run against a copy of the repo.
+  local tmp; tmp="$(mktemp -d)"
+  cp -R "$REPO_ROOT"/. "$tmp"/
+  printf 'AI_ASSISTANT=copilot\n' > "$tmp/bootstrap.local.conf"
+  local out; out="$("$tmp/install.sh" --dry-run --yes --only claude-code 2>&1)"
+  rm -rf "$tmp"
   grep -q 'ai=copilot' <<<"$out"
 }
 check "AI_ASSISTANT defaults to claude"  t_ai_default
@@ -89,10 +95,12 @@ d=json.load(open(sys.argv[1])); ok=True
 ok &= d["model"]=="opus"
 ok &= "Bash(mine *)" in d["permissions"]["allow"]
 ok &= d["enabledPlugins"]["superpowers@claude-plugins-official"] is True
+# the stale hook group with the same matcher is replaced, not duplicated
 ok &= len(d["hooks"]["PostToolUse"])==1
+ok &= "old-hook" not in json.dumps(d["hooks"]["PostToolUse"])
 sys.exit(0 if ok else 1)' "$1"; }
 t_json_merge() {
-  echo '{"model":"opus","permissions":{"allow":["Bash(ls *)","Bash(mine *)"]},"hooks":{}}' > "$TMP_HOME/base.json"
+  echo '{"model":"opus","permissions":{"allow":["Bash(ls *)","Bash(mine *)"]},"hooks":{"PostToolUse":[{"matcher":"Edit|Write|MultiEdit","hooks":[{"type":"command","command":"old-hook"}]}]}}' > "$TMP_HOME/base.json"
   run_lib "json_merge \"\$HOME/base.json\" '$REPO_ROOT/claude/settings.json'" > "$TMP_HOME/merged.json"
   json_has "$TMP_HOME/merged.json"
 }
@@ -126,11 +134,20 @@ echo "== hooks"
 t_protect_blocks() { ! echo '{"tool_input":{"file_path":"/x/.env"}}' | bash claude/hooks/protect-paths.sh 2>/dev/null; }
 t_protect_lock()   { ! echo '{"tool_input":{"file_path":"/x/package-lock.json"}}' | bash claude/hooks/protect-paths.sh 2>/dev/null; }
 t_protect_allows() { echo '{"tool_input":{"file_path":"/x/main.py"}}' | bash claude/hooks/protect-paths.sh; }
+t_protect_example() { echo '{"tool_input":{"file_path":"/x/.env.example"}}' | bash claude/hooks/protect-paths.sh; }
+t_format_no_prettier() {
+  # A YAML file in a project without prettier config must be left untouched.
+  local d; d="$(mktemp -d)"; printf 'a:   1\n' > "$d/x.yaml"
+  echo "{\"tool_input\":{\"file_path\":\"$d/x.yaml\"}}" | bash claude/hooks/format-on-edit.sh
+  [[ "$(cat "$d/x.yaml")" == 'a:   1' ]]; local rc=$?; rm -rf "$d"; return $rc
+}
 t_format_noop()    { echo '{"tool_input":{"file_path":"/nonexistent/file.py"}}' | bash claude/hooks/format-on-edit.sh; }
 t_format_badjson() { echo 'not json' | bash claude/hooks/format-on-edit.sh; }
 check "protect-paths blocks .env"        t_protect_blocks
 check "protect-paths blocks lock files"  t_protect_lock
 check "protect-paths allows code"        t_protect_allows
+check "protect-paths allows .env.example" t_protect_example
+check "format-on-edit skips non-prettier projects" t_format_no_prettier
 check "format-on-edit tolerates missing file" t_format_noop
 check "format-on-edit tolerates bad input"    t_format_badjson
 

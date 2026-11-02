@@ -61,7 +61,7 @@ run `./install.sh --only dotfiles`.
 
 ## GitHub Copilot
 
-- `copilot/config.json` is symlinked to `~/.copilot/config.json`.
+- `copilot/config.json` seeds `~/.copilot/config.json` once (the CLI rewrites that file itself, so it is copied, not linked).
 - Project instructions: copy `copilot/templates/copilot-instructions.md` to
   `<project>/.github/copilot-instructions.md`, or keep a tool-agnostic
   `AGENTS.md` at the project root (Copilot CLI reads both).

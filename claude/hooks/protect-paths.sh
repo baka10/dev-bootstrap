@@ -17,6 +17,8 @@ file="$(read_file_path 2>/dev/null)"
 base="$(basename "$file")"
 
 case "$base" in
+  .env.example|.env.sample|.env.template|.env.dist)
+    exit 0 ;;   # templates hold no secrets
   .env|.env.*|*.pem|*.key|id_rsa*|id_ed25519*|credentials.json|.credentials.json|.npmrc|.pypirc)
     echo "Blocked: '$file' holds secrets. Ask the user to edit it by hand." >&2
     exit 2 ;;
