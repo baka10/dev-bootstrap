@@ -5,26 +5,25 @@ on:
     branches: [main]
   pull_request:
 
+# A newer push supersedes a run that is still queued or in progress; without this
+# GitHub cancels the stale macOS jobs anyway and marks the whole run as failed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-smoke:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Install shellcheck + jq
-        run: |
-          if [ "$RUNNER_OS" = "macOS" ]; then brew install shellcheck jq; else sudo apt-get update -qq && sudo apt-get install -y shellcheck jq; fi
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck jq
       - run: make test
 
-  install:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  install-ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Real install (everything except Claude plugins)
@@ -34,8 +33,25 @@ jobs:
       - name: zsh starts with the configured prompt
         run: zsh -ic 'echo "theme=$ZSH_THEME"; [ "$ZSH_THEME" = "powerlevel10k/powerlevel10k" ]'
 
+  # One macOS job (runners are scarce): smoke tests + real install + idempotence.
+  install-macos:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck + jq
+        run: brew install shellcheck jq
+      - run: make test
+      - name: Real install (everything except Claude plugins)
+        run: ./install.sh --yes --skip claude-code
+      - name: Second run is a no-op
+        run: ./install.sh --yes --skip claude-code | tee second.log && grep -q 'already done' second.log
+      - name: zsh starts with the configured prompt
+        run: zsh -ic 'echo "theme=$ZSH_THEME"; [ "$ZSH_THEME" = "powerlevel10k/powerlevel10k" ]'
+
   docker:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - run: ./tests/docker/run.sh
