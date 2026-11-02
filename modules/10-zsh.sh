@@ -5,8 +5,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
 load_config
 detect_os
 
-has zsh || die "zsh is not installed (run the 'packages' module first)"
-has git || die "git is not installed (run the 'packages' module first)"
+# In a dry run the packages module has not actually run, so only warn.
+for tool in zsh git; do
+  if ! has "$tool"; then
+    if [[ "$DRY_RUN" == 1 ]]; then
+      log_warn "$tool is not installed yet (the 'packages' module installs it)"
+    else
+      die "$tool is not installed (run the 'packages' module first)"
+    fi
+  fi
+done
 
 ZSH_DIR="${ZSH:-$HOME/.oh-my-zsh}"
 ZSH_CUSTOM="${ZSH_CUSTOM:-$ZSH_DIR/custom}"
@@ -25,7 +33,7 @@ git_clone_or_update https://github.com/zsh-users/zsh-autosuggestions.git "$ZSH_C
 git_clone_or_update https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" --depth=1
 
 # Make zsh the login shell.
-zsh_path="$(command -v zsh)"
+zsh_path="$(command -v zsh || echo /usr/bin/zsh)"
 if [[ "${SHELL:-}" == "$zsh_path" ]]; then
   log_skip "login shell is $zsh_path"
 elif [[ "$CHANGE_SHELL" != 1 ]]; then

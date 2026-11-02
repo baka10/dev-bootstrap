@@ -24,7 +24,10 @@ dry_count(){ local pat="$1" out; shift; out="$(dry "$@")"; grep -c -- "$pat" <<<
 echo "== installer"
 t_help()   { local out; out="$(./install.sh --help)"; grep -q -- '--dry-run' <<<"$out"; }
 t_list()   { local out; out="$(./install.sh --list)"; grep -q 'claude-code' <<<"$out" && grep -q 'copilot' <<<"$out"; }
-t_dry()    { dry > "$LOG.dry" && grep -q 'dry run: nothing was changed' "$LOG.dry" && grep -q 'module: copilot' "$LOG.dry"; }
+t_dry()    {
+  if ! dry > "$LOG.dry"; then tail -8 "$LOG.dry"; return 1; fi
+  grep -q 'dry run: nothing was changed' "$LOG.dry" && grep -q 'module: copilot' "$LOG.dry"
+}
 t_only()   { dry_has 'module: dotfiles' --only dotfiles && dry_lacks 'module: zsh' --only dotfiles; }
 t_skip()   { dry_lacks 'module: fonts' --skip fonts,claude-code; }
 t_badopt() { ! ./install.sh --nope >/dev/null 2>&1; }
@@ -93,6 +96,14 @@ t_json_merge() {
   run_lib "json_merge \"\$HOME/base.json\" '$REPO_ROOT/claude/settings.json'" > "$TMP_HOME/merged.json"
   json_has "$TMP_HOME/merged.json"
 }
+t_json_merge_jq() {
+  # The jq path is only exercised where jq exists; the test fails loudly when it
+  # exists and misbehaves, and is skipped otherwise.
+  command -v jq >/dev/null 2>&1 || { echo "  (jq not installed, skipped)"; return 0; }
+  jq -n '{}' >/dev/null
+  run_lib "json_merge \"\$HOME/base.json\" '$REPO_ROOT/claude/settings.json'" > "$TMP_HOME/merged-jq.json"
+  json_has "$TMP_HOME/merged-jq.json"
+}
 t_json_merge_py() {
   # Force the python3 path even when jq is installed.
   run_lib "has() { [[ \$1 != jq ]] && command -v \"\$1\" >/dev/null 2>&1; }; json_merge \"\$HOME/base.json\" '$REPO_ROOT/claude/settings.json'" > "$TMP_HOME/merged-py.json"
@@ -106,6 +117,7 @@ check "link_file backs up old file"      t_link_backup
 check "link_file is idempotent"          t_link_idem
 check "copy_if_missing never overwrites" t_copy_once
 check "json_merge keeps user keys"       t_json_merge
+check "json_merge jq path"               t_json_merge_jq
 check "json_merge python3 fallback"      t_json_merge_py
 check "detect_os works here"             t_detect_os
 check "settings/config JSON is valid"    t_settings_json

@@ -259,13 +259,15 @@ append_line_once() {
 # (order preserved, duplicates dropped). Uses jq when present, python3 otherwise.
 json_merge() {
   if has jq; then
+    # $-parameters bind values; plain filter parameters would be re-evaluated
+    # against the reduce accumulator and return garbage.
     jq -s '
-      def merge(a; b):
-        if (a | type) == "object" and (b | type) == "object" then
-          reduce (b | keys_unsorted[]) as $k (a; .[$k] = merge(a[$k]; b[$k]))
-        elif (a | type) == "array" and (b | type) == "array" then
-          (a + b) | unique
-        else b end;
+      def merge($a; $b):
+        if ($a | type) == "object" and ($b | type) == "object" then
+          reduce ($b | keys_unsorted[]) as $k ($a; .[$k] = merge($a[$k]; $b[$k]))
+        elif ($a | type) == "array" and ($b | type) == "array" then
+          reduce $b[] as $v ($a; if index([$v]) then . else . + [$v] end)
+        else $b end;
       merge(.[0]; .[1])
     ' "$1" "$2"
   elif has python3; then
