@@ -1,0 +1,27 @@
+# Global gitignore (~/.config/git/ignore) — things that never belong in any repo.
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# AI assistant local state
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Python / Node leftovers
+__pycache__/
+.venv/
+node_modules/

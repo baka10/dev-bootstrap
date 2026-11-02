@@ -1,0 +1,8 @@
+# ~/.gitconfig.local — your identity and per-machine git settings (not tracked).
+[user]
+	name = Your Name
+	email = you@example.com
+	# signingkey = ...
+
+# [commit]
+# 	gpgsign = true

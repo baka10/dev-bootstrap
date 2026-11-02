@@ -1,0 +1,51 @@
+# ~/.gitconfig — managed by dev-bootstrap. Identity lives in ~/.gitconfig.local.
+
+[include]
+	path = ~/.gitconfig.local
+
+[init]
+	defaultBranch = main
+
+[core]
+	editor = vim
+	autocrlf = input
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+	default = current
+
+[fetch]
+	prune = true
+
+[rebase]
+	autoStash = true
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+
+[merge]
+	conflictStyle = zdiff3
+
+[rerere]
+	enabled = true
+
+[alias]
+	st = status -sb
+	co = checkout
+	sw = switch
+	lg = log --oneline --graph --decorate
+	last = log -1 HEAD --stat
+	amend = commit --amend --no-edit
+	undo = reset --soft HEAD~1
+
+# GitHub CLI handles credentials (gh auth login).
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential

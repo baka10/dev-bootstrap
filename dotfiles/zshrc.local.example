@@ -1,0 +1,14 @@
+# ~/.zshrc.local — machine-specific settings, sourced at the end of ~/.zshrc.
+# This file is created once by dev-bootstrap and never overwritten or tracked.
+# Put here: secrets, API keys, paths that exist only on this machine.
+
+# Example: Java / Groovy installed under ~/.local/opt
+# export JAVA_HOME="$HOME/.local/opt/jre"
+# export GROOVY_HOME="$HOME/.local/opt/groovy"
+# path=("$JAVA_HOME/bin" "$GROOVY_HOME/bin" $path)
+
+# Example: API keys (never commit these)
+# export ANTHROPIC_API_KEY="..."
+
+# Example: WSL — open Windows Explorer in the current directory
+# alias open='explorer.exe'

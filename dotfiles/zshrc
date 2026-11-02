@@ -1,0 +1,66 @@
+# ~/.zshrc — managed by dev-bootstrap (symlinked from dotfiles/zshrc).
+# Machine-specific settings and secrets go to ~/.zshrc.local (not tracked).
+
+# --- Powerlevel10k instant prompt (must stay at the top) ----------------------
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# --- PATH ---------------------------------------------------------------------
+typeset -U path                       # de-duplicate
+path=("$HOME/.local/bin" "$HOME/bin" $path)
+# Homebrew (macOS): Apple Silicon or Intel prefix.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+# --- oh-my-zsh ----------------------------------------------------------------
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# nvm is slow to load; the omz plugin can defer it until node/npm/nvm is first used.
+zstyle ':omz:plugins:nvm' lazy yes
+zstyle ':omz:plugins:nvm' autoload yes   # switch Node version on .nvmrc
+
+plugins=(
+  git
+  nvm
+  zsh-autosuggestions
+  zsh-syntax-highlighting   # keep last: it must wrap every other widget
+)
+
+DISABLE_AUTO_UPDATE="true"       # updates are a deliberate action: `omz update`
+HIST_STAMPS="yyyy-mm-dd"
+source "$ZSH/oh-my-zsh.sh"
+
+# --- Prompt -------------------------------------------------------------------
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# --- History ------------------------------------------------------------------
+HISTSIZE=50000
+SAVEHIST=50000
+setopt HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS SHARE_HISTORY
+
+# --- Tools --------------------------------------------------------------------
+export EDITOR="${EDITOR:-vim}"
+export NVM_DIR="$HOME/.nvm"
+
+# fzf keybindings (Ctrl-R history, Ctrl-T files, Alt-C cd) — fzf >= 0.48
+if command -v fzf >/dev/null 2>&1; then
+  source <(fzf --zsh) 2>/dev/null
+  command -v fd >/dev/null 2>&1 && export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+fi
+
+# --- Aliases ------------------------------------------------------------------
+alias ll='ls -lah'
+alias gs='git status -sb'
+alias gl='git log --oneline --graph --decorate -20'
+command -v bat >/dev/null 2>&1 && alias cat='bat --paging=never --style=plain'
+command -v rg  >/dev/null 2>&1 && alias grep='rg'
+alias cc='claude'
+alias ccr='claude --resume'
+
+# --- Local overrides (untracked) -----------------------------------------------
+[[ ! -f ~/.zshrc.local ]] || source ~/.zshrc.local

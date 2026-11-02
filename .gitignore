@@ -1,0 +1,4 @@
+*.log
+.DS_Store
+.claude/settings.local.json
+bootstrap.local.conf
